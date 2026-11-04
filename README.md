@@ -38,7 +38,8 @@ Usuarios demo (contraseña `1234`): `ximena@icesi.edu.co` (ADMIN + EMPRENDEDOR),
 2. En el mismo proyecto: **+ New → Database → PostgreSQL**.
 3. Servicio de la API → **Settings**:
    - _Root Directory_: `/apps/api`
-   - _Config-as-code → Railway config file_: `/apps/api/railway.json` (build, migraciones pre-deploy, healthcheck)
+   - _(Opcional)_ _Config-as-code → Railway config file_: `/apps/api/railway.json` (healthcheck y reinicios)
+   - `npm start` aplica las migraciones pendientes (y el seed si la BD está vacía) antes de arrancar
 4. **Variables** de la API:
    - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`
    - `JWT_SECRET` = cadena aleatoria de 32+ caracteres
