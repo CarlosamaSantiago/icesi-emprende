@@ -1,0 +1,24 @@
+{
+  "name": "icesi-emprende",
+  "private": true,
+  "description": "Emprende ICESI v2 — Next.js (apps/web) + NestJS (apps/api) + PostgreSQL",
+  "scripts": {
+    "prepare": "husky",
+    "install:all": "npm install && npm --prefix apps/api install && npm --prefix apps/web install",
+    "dev:api": "npm --prefix apps/api run start:dev",
+    "dev:web": "npm --prefix apps/web run dev",
+    "db:migrate": "npm --prefix apps/api run db:migrate",
+    "lint": "npm --prefix apps/web run lint && npm --prefix apps/api run lint",
+    "typecheck": "npm --prefix apps/web run typecheck && npx --prefix apps/api tsc --noEmit -p apps/api/tsconfig.json",
+    "test": "npm --prefix apps/api test && npm --prefix apps/web test",
+    "format": "prettier --write \"apps/*/src/**/*.{ts,tsx,css}\""
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.6",
+    "prettier": "^3.6.2"
+  },
+  "lint-staged": {
+    "apps/**/*.{ts,tsx,css,json,md}": "prettier --write"
+  }
+}
