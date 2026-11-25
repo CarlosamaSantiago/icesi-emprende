@@ -6,7 +6,7 @@ import { type ActionResult, fromError, fromZod, ok } from '@/lib/action-result';
 import { api } from '@/lib/api/client';
 import { requireSession } from '@/lib/auth/session';
 
-export const paymentSchema = z.object({
+const paymentSchema = z.object({
   pedidoId: z.number().int().positive(),
   estado: z.enum(['CONFIRMADO', 'FALLIDO']),
   referencia: z.string().trim().max(100, 'Máximo 100 caracteres').optional(),

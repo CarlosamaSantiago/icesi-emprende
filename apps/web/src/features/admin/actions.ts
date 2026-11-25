@@ -150,7 +150,7 @@ export async function deleteUserAction(input: { id: number }): Promise<ActionRes
 }
 
 // ------------------------------------------------------------------ HU-28 categorías
-export const categorySchema = z.object({
+const categorySchema = z.object({
   id: z.number().int().positive().optional(),
   nombre: z.string().trim().min(2, 'El nombre debe tener al menos 2 caracteres').max(100),
   descripcion: z.string().trim().max(255).optional(),
