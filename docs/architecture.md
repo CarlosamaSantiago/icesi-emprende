@@ -101,6 +101,22 @@ Reglas:
 - Inventario: se valida en checkout y se **descuenta al confirmar**; se restituye al cancelar solo si ya se había descontado (adelanta HU-24/HU-25).
 - Comprar en el propio emprendimiento está bloqueado.
 
+## 6b. Reglas de negocio (sprint 2, HU-24…HU-46)
+
+Reglas compartidas en `apps/api/src/modules/shared/reglas.ts` (+ gemelo SQL en `shared/sql.ts`).
+
+- **Pedido válido** (HU-30/35/36): estado ∈ {`CONFIRMADO`, `PREPARANDO`, `ENTREGADO`} y pago no `FALLIDO`/`REEMBOLSADO`. Solo los válidos suman a ingresos, ranking y GMV. Mismo criterio en métricas, PDF, CSV, ranking e indicadores.
+- **Pagos** (HU-44): el emprendedor registra el resultado (`CONFIRMADO`/`FALLIDO`); comisión CIEI 10 % + costo pasarela 2 % se calculan en el API, nunca en el cliente. Cancelar un pedido con pago confirmado lo pasa a `REEMBOLSADO`. No hay pasarela real: *supuesto a validar con el PO*.
+- **Calificaciones** (HU-37…40): emprendimiento se califica una vez por pedido `ENTREGADO` (índice único); producto, una vez por usuario con compra verificada; solo el autor edita/retira. Promedio derivado, `null` (no 0) si no hay opiniones.
+- **Notificaciones** (HU-41/42): persistidas con `leida`; todas las consultas filtran por usuario. El front las obtiene por *polling* de un route handler BFF (la capa web es serverless, sin WebSocket) y muestra un toast al llegar una nueva.
+- **Aprobación CIEI** (HU-43): `PENDIENTE → ACTIVO` (aprobar) o `INACTIVO` (rechazar, motivo obligatorio). Cada decisión queda en `aprobacion_emprendimiento` (quién, cuándo, motivo). Activar/desactivar no sustituye la revisión.
+- **Usuarios y roles** (HU-26/27): el guard relee los roles de la BD en cada request (cambio inmediato). No se puede quitar el último rol, quitarse el propio ADMIN, ni dejar la plataforma sin admin. **Política de borrado**: no se eliminan cuentas con emprendimientos o pedidos (historial comercial); el resto se elimina con sus datos personales. *Supuesto a validar con el CIEI.*
+- **Categorías** (HU-28): nombre único sin distinguir mayúsculas; no se elimina una con emprendimientos.
+- **Consentimiento** (HU-45): el registro exige aceptar la política; se guarda `consentimiento(usuario, versión, fecha)`. El texto de `GET /legal/tratamiento-datos` es **provisional** hasta que jurídica entregue el definitivo.
+- **Emprendimiento del Mes** (HU-46): la última designación del mes gana; solo emprendimientos `ACTIVO`; notifica al propietario; insignia en marketplace y detalle.
+- **Ranking** (HU-35): por ventas válidas, desempate por unidades, pedidos y nombre; empates comparten posición. **Indicadores** (HU-36): GMV, comisión y pasarela por mes, con meses sin actividad en cero.
+- Filtros de fecha de métricas/pagos comparan por fecha calendario (sin ajuste de zona horaria).
+
 ## 7. Convenciones
 
 - TypeScript `strict`. Sin `any` explícito.

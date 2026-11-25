@@ -2,7 +2,16 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/jwt';
 
 /** Routes that require a valid session (HU-02 CA3). Role checks happen in the page and, authoritatively, in the API. */
-const PROTECTED = ['/perfil', '/carrito', '/mi-negocio', '/mis-compras', '/pedidos-recibidos', '/admin'];
+const PROTECTED = [
+  '/perfil',
+  '/carrito',
+  '/mi-negocio',
+  '/mis-compras',
+  '/pedidos-recibidos',
+  '/admin',
+  '/metricas',
+  '/mis-calificaciones',
+];
 const AUTH_PAGES = ['/login', '/registro'];
 
 function buildCsp(nonce: string, dev: boolean, https: boolean) {

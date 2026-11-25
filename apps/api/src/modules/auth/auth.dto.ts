@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import {
+  Equals,
+  IsBoolean,
   IsEmail,
   IsIn,
   IsInt,
@@ -65,4 +67,10 @@ export class RegisterDto {
   @IsOptional()
   @IsIn(['COMPRADOR', 'EMPRENDEDOR'])
   rol?: 'COMPRADOR' | 'EMPRENDEDOR';
+
+  /** HU-45 CA1: registration requires explicit acceptance of the personal-data policy. */
+  @ApiProperty({ example: true })
+  @IsBoolean()
+  @Equals(true, { message: 'Debes aceptar la política de tratamiento de datos para registrarte' })
+  aceptaTratamientoDatos: boolean;
 }

@@ -15,6 +15,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core';
@@ -181,34 +182,50 @@ export const detallePedido = pgTable('detalle_pedido', {
     .references(() => producto.id),
 });
 
-export const calificacion = pgTable('calificacion', {
-  id: serial('id_calificacion').primaryKey(),
-  puntuacion: integer('puntuacion').notNull(),
-  comentario: text('comentario'),
-  fecha: timestamp('fecha').notNull().defaultNow(),
-  usuarioId: integer('id_usuario')
-    .notNull()
-    .references(() => usuario.id),
-  emprendimientoId: integer('id_emprendimiento')
-    .notNull()
-    .references(() => emprendimiento.id),
-  pedidoId: integer('id_pedido')
-    .notNull()
-    .references(() => pedido.id),
-});
+export const calificacion = pgTable(
+  'calificacion',
+  {
+    id: serial('id_calificacion').primaryKey(),
+    puntuacion: integer('puntuacion').notNull(),
+    comentario: text('comentario'),
+    fecha: timestamp('fecha').notNull().defaultNow(),
+    usuarioId: integer('id_usuario')
+      .notNull()
+      .references(() => usuario.id),
+    emprendimientoId: integer('id_emprendimiento')
+      .notNull()
+      .references(() => emprendimiento.id),
+    pedidoId: integer('id_pedido')
+      .notNull()
+      .references(() => pedido.id),
+  },
+  (t) => [
+    // HU-37 CA3: one review per order, enforced by the database (not only by the service).
+    uniqueIndex('uq_calificacion_pedido').on(t.pedidoId),
+    index('idx_calificacion_emprendimiento').on(t.emprendimientoId),
+  ],
+);
 
-export const calificacionProducto = pgTable('calificacion_producto', {
-  id: serial('id_calificacion_producto').primaryKey(),
-  puntuacion: integer('puntuacion').notNull(),
-  comentario: text('comentario'),
-  fecha: timestamp('fecha').notNull().defaultNow(),
-  usuarioId: integer('id_usuario')
-    .notNull()
-    .references(() => usuario.id),
-  productoId: integer('id_producto')
-    .notNull()
-    .references(() => producto.id),
-});
+export const calificacionProducto = pgTable(
+  'calificacion_producto',
+  {
+    id: serial('id_calificacion_producto').primaryKey(),
+    puntuacion: integer('puntuacion').notNull(),
+    comentario: text('comentario'),
+    fecha: timestamp('fecha').notNull().defaultNow(),
+    usuarioId: integer('id_usuario')
+      .notNull()
+      .references(() => usuario.id),
+    productoId: integer('id_producto')
+      .notNull()
+      .references(() => producto.id),
+  },
+  (t) => [
+    // HU-39: a buyer rates a product once; they can edit or withdraw it later (HU-40).
+    uniqueIndex('uq_calificacion_producto_usuario').on(t.usuarioId, t.productoId),
+    index('idx_calificacion_producto_producto').on(t.productoId),
+  ],
+);
 
 export const notificacion = pgTable(
   'notificacion',
@@ -221,8 +238,10 @@ export const notificacion = pgTable(
       .notNull()
       .references(() => usuario.id),
     referenciaId: integer('referencia_id'),
+    /** HU-42: unread notifications drive the badge counter. */
+    leida: boolean('leida').notNull().default(false),
   },
-  (t) => [index('idx_notificacion_usuario').on(t.usuarioId)],
+  (t) => [index('idx_notificacion_usuario').on(t.usuarioId, t.leida)],
 );
 
 export const mensaje = pgTable('mensaje', {
@@ -247,6 +266,80 @@ export const reporte = pgTable('reporte', {
     .notNull()
     .references(() => usuario.id),
 });
+
+// ---------------------------------------------------------------- sprint 2: payments, approvals, consent, featured
+/**
+ * HU-44: payment confirmation recorded per order (no payment gateway yet — pending PO decision).
+ * Amounts are computed by the API from `pedido.total`; only CONFIRMADO rows count as revenue.
+ */
+export const pago = pgTable(
+  'pago',
+  {
+    id: serial('id_pago').primaryKey(),
+    pedidoId: integer('id_pedido')
+      .notNull()
+      .references(() => pedido.id, { onDelete: 'cascade' }),
+    /** CONFIRMADO | FALLIDO | REEMBOLSADO */
+    estado: varchar('estado', { length: 20 }).notNull(),
+    monto: money('monto').notNull(),
+    comisionCiei: money('comision_ciei').notNull().default(0),
+    costoPasarela: money('costo_pasarela').notNull().default(0),
+    referencia: varchar('referencia', { length: 100 }),
+    registradoPorId: integer('id_registrado_por').references(() => usuario.id, { onDelete: 'set null' }),
+    creadoEn: timestamp('creado_en').notNull().defaultNow(),
+    actualizadoEn: timestamp('actualizado_en').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('uq_pago_pedido').on(t.pedidoId)],
+);
+
+/** HU-43 CA2: every approve/reject decision is kept (traceability). The latest one is the current decision. */
+export const aprobacionEmprendimiento = pgTable(
+  'aprobacion_emprendimiento',
+  {
+    id: serial('id_aprobacion').primaryKey(),
+    emprendimientoId: integer('id_emprendimiento')
+      .notNull()
+      .references(() => emprendimiento.id, { onDelete: 'cascade' }),
+    /** APROBADO | RECHAZADO */
+    decision: varchar('decision', { length: 20 }).notNull(),
+    motivo: text('motivo'),
+    adminId: integer('id_admin').references(() => usuario.id, { onDelete: 'set null' }),
+    fecha: timestamp('fecha').notNull().defaultNow(),
+  },
+  (t) => [index('idx_aprobacion_emprendimiento').on(t.emprendimientoId)],
+);
+
+/** HU-45 CA2: evidence that a user accepted a given version of the data-processing notice. */
+export const consentimiento = pgTable(
+  'consentimiento',
+  {
+    id: serial('id_consentimiento').primaryKey(),
+    usuarioId: integer('id_usuario')
+      .notNull()
+      .references(() => usuario.id, { onDelete: 'cascade' }),
+    version: varchar('version', { length: 50 }).notNull(),
+    aceptadoEn: timestamp('aceptado_en').notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex('uq_consentimiento_usuario_version').on(t.usuarioId, t.version)],
+);
+
+/**
+ * HU-46: append-only history of "Emprendimiento del Mes" designations.
+ * For a given `periodo` (YYYY-MM) the row with the highest id is the current one; older rows are kept.
+ */
+export const emprendimientoDelMes = pgTable(
+  'emprendimiento_del_mes',
+  {
+    id: serial('id_designacion').primaryKey(),
+    emprendimientoId: integer('id_emprendimiento')
+      .notNull()
+      .references(() => emprendimiento.id, { onDelete: 'cascade' }),
+    periodo: varchar('periodo', { length: 7 }).notNull(),
+    designadoPorId: integer('id_designado_por').references(() => usuario.id, { onDelete: 'set null' }),
+    creadoEn: timestamp('creado_en').notNull().defaultNow(),
+  },
+  (t) => [index('idx_edm_periodo').on(t.periodo)],
+);
 
 // ---------------------------------------------------------------- files (StorageService → Postgres implementation)
 const bytea = customType<{ data: Buffer }>({ dataType: () => 'bytea' });
@@ -308,6 +401,8 @@ export const pedidoRelations = relations(pedido, ({ one, many }) => ({
   emprendimiento: one(emprendimiento, { fields: [pedido.emprendimientoId], references: [emprendimiento.id] }),
   estado: one(estado, { fields: [pedido.estadoId], references: [estado.id] }),
   detalles: many(detallePedido),
+  pago: one(pago),
+  calificacion: one(calificacion),
 }));
 export const detallePedidoRelations = relations(detallePedido, ({ one }) => ({
   pedido: one(pedido, { fields: [detallePedido.pedidoId], references: [pedido.id] }),
@@ -324,6 +419,22 @@ export const calificacionRelations = relations(calificacion, ({ one }) => ({
 export const calificacionProductoRelations = relations(calificacionProducto, ({ one }) => ({
   usuario: one(usuario, { fields: [calificacionProducto.usuarioId], references: [usuario.id] }),
   producto: one(producto, { fields: [calificacionProducto.productoId], references: [producto.id] }),
+}));
+export const pagoRelations = relations(pago, ({ one }) => ({
+  pedido: one(pedido, { fields: [pago.pedidoId], references: [pedido.id] }),
+}));
+export const aprobacionRelations = relations(aprobacionEmprendimiento, ({ one }) => ({
+  emprendimiento: one(emprendimiento, {
+    fields: [aprobacionEmprendimiento.emprendimientoId],
+    references: [emprendimiento.id],
+  }),
+  admin: one(usuario, { fields: [aprobacionEmprendimiento.adminId], references: [usuario.id] }),
+}));
+export const emprendimientoDelMesRelations = relations(emprendimientoDelMes, ({ one }) => ({
+  emprendimiento: one(emprendimiento, {
+    fields: [emprendimientoDelMes.emprendimientoId],
+    references: [emprendimiento.id],
+  }),
 }));
 export const notificacionRelations = relations(notificacion, ({ one }) => ({
   usuario: one(usuario, { fields: [notificacion.usuarioId], references: [usuario.id] }),

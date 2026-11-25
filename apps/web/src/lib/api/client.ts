@@ -71,3 +71,17 @@ export async function api<T>(path: string, opts: RequestOptions = {}): Promise<T
 export function isNotFound(e: unknown) {
   return e instanceof ApiError && (e.status === 404 || e.status === 403);
 }
+
+/** Raw GET for binary downloads (PDF/CSV). Returns the upstream Response untouched; callers stream it back. */
+export async function apiRaw(path: string, query?: Record<string, string | number | undefined>) {
+  const url = new URL(`/api${path}`, env.API_URL);
+  for (const [k, v] of Object.entries(query ?? {})) {
+    if (v !== undefined && v !== '') url.searchParams.set(k, String(v));
+  }
+  const token = await getSessionToken();
+  return fetch(url, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    cache: 'no-store',
+    signal: AbortSignal.timeout(30_000),
+  });
+}

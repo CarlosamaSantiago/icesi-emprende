@@ -125,6 +125,31 @@ export function RegisterForm() {
           ))}
         </div>
       </fieldset>
+      <div>
+        <label className="flex cursor-pointer items-start gap-2.5 text-[13px]">
+          <input
+            type="checkbox"
+            className="mt-0.5 accent-primary"
+            aria-invalid={!!e.aceptaTratamientoDatos}
+            aria-describedby="aceptaTratamientoDatos-msg"
+            {...register('aceptaTratamientoDatos')}
+          />
+          <span>
+            Acepto la{' '}
+            <Link href="/tratamiento-datos" target="_blank" className="font-semibold text-primary underline">
+              política de tratamiento de datos personales
+            </Link>
+            <span className="ml-0.5 text-danger" aria-hidden>
+              *
+            </span>
+          </span>
+        </label>
+        {e.aceptaTratamientoDatos && (
+          <p id="aceptaTratamientoDatos-msg" role="alert" className="mt-1 text-xs text-danger">
+            {e.aceptaTratamientoDatos.message}
+          </p>
+        )}
+      </div>
       <Button type="submit" size="lg" className="w-full" loading={pending}>
         Crear cuenta
       </Button>

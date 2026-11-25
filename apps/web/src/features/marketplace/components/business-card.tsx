@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+import { Award, Star } from 'lucide-react';
 import Link from 'next/link';
 import type { EmprendimientoResumen } from '@/lib/api/types';
 import { ProductImage } from './product-image';
@@ -16,6 +16,9 @@ export function BusinessCard({ emprendimiento: e }: { emprendimiento: Emprendimi
             <Star className="size-3.5 shrink-0 fill-warning text-warning" aria-label="Destacado" />
           )}
           {e.nombre}
+          {e.delMes && (
+            <Award className="size-3.5 shrink-0 text-accent" aria-label="Emprendimiento del Mes" />
+          )}
         </p>
         <p className="text-xs text-muted">
           {e.categoria.nombre} · {e.totalProductos} productos

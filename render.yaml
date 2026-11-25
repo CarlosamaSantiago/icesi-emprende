@@ -1,0 +1,17 @@
+# Render Blueprint — API (NestJS). La base de datos va aparte (Neon, plan gratis).
+services:
+  - type: web
+    name: icesi-emprende-api
+    runtime: node
+    plan: free
+    rootDir: apps/api
+    buildCommand: npm ci && npm run build
+    startCommand: npm start # aplica migraciones (y seed si la BD está vacía) y arranca
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # pega la cadena de conexión de Neon
+      - key: JWT_SECRET
+        sync: false # el MISMO valor que usa el web en Vercel
+      - key: NODE_VERSION
+        value: "22"

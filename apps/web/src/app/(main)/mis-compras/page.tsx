@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { EmptyState, PageHeader } from '@/components/ui/feedback';
+import { RatingDialog } from '@/features/ratings/components/rating-dialog';
 import { OrderCard } from '@/features/orders/components/order-card';
 import { getMisCompras } from '@/features/orders/queries';
 import { requireSession } from '@/lib/auth/session';
@@ -30,7 +31,20 @@ export default async function MisComprasPage() {
       ) : (
         <div className="grid gap-5 xl:grid-cols-2">
           {pedidos.map((p) => (
-            <OrderCard key={p.id} pedido={p} perspective="buyer" />
+            <OrderCard
+              key={p.id}
+              pedido={p}
+              perspective="buyer"
+              actions={
+                p.puedeCalificar ? (
+                  <RatingDialog
+                    target={{ kind: 'pedido', pedidoId: p.id }}
+                    title={`Califica a ${p.emprendimiento.nombre}`}
+                    trigger={<Button size="sm">Calificar emprendimiento</Button>}
+                  />
+                ) : undefined
+              }
+            />
           ))}
         </div>
       )}

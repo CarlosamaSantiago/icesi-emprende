@@ -9,6 +9,10 @@ const STATUS: Record<string, { label: string; tone: NonNullable<BadgeProps['tone
   PREPARANDO: { label: 'Preparando', tone: 'accent' },
   ENTREGADO: { label: 'Entregado', tone: 'success' },
   CANCELADO: { label: 'Cancelado', tone: 'danger' },
+  APROBADO: { label: 'Aprobado', tone: 'success' },
+  RECHAZADO: { label: 'Rechazado', tone: 'danger' },
+  FALLIDO: { label: 'Pago fallido', tone: 'danger' },
+  REEMBOLSADO: { label: 'Reembolsado', tone: 'neutral' },
 };
 
 export function StatusBadge({ status, className }: { status: string; className?: string }) {

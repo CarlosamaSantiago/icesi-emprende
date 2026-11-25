@@ -23,6 +23,7 @@ console.log('✔ migrations applied');
 const { rows } = await pool.query<{ n: number }>('SELECT count(*)::int AS n FROM estado');
 if (rows[0].n === 0 || process.argv.includes('--force-seed')) {
   await pool.query(readFileSync(join(here, 'seed.sql'), 'utf8'));
+  await pool.query(readFileSync(join(here, 'seed-sprint2.sql'), 'utf8')); // sprint-2 demo data
   console.log('✔ demo data seeded (all users: password 1234)');
 } else {
   console.log('• data already present, seed skipped');

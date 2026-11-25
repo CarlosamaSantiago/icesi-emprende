@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { EmptyState, PageHeader } from '@/components/ui/feedback';
 import { ESTADOS_PEDIDO } from '@/features/orders/schemas';
+import { RegisterPaymentButton } from '@/features/payments/components/register-payment-button';
 import { OrderCard } from '@/features/orders/components/order-card';
 import { OrderStatusActions } from '@/features/orders/components/order-status-actions';
 import { getPedidosRecibidos } from '@/features/orders/queries';
@@ -58,7 +59,14 @@ export default async function PedidosRecibidosPage({
               key={p.id}
               pedido={p}
               perspective="seller"
-              actions={<OrderStatusActions pedidoId={p.id} allowed={p.transicionesPermitidas} />}
+              actions={
+                <div className="flex flex-wrap items-center gap-2">
+                  {p.puedeRegistrarPago && (
+                    <RegisterPaymentButton pedidoId={p.id} total={p.total} actual={p.pago?.estado} />
+                  )}
+                  <OrderStatusActions pedidoId={p.id} allowed={p.transicionesPermitidas} />
+                </div>
+              }
             />
           ))}
         </div>

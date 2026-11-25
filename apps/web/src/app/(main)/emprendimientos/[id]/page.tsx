@@ -1,4 +1,4 @@
-import { ArrowLeft, CalendarDays, PackageOpen, Star, User } from 'lucide-react';
+import { ArrowLeft, Award, CalendarDays, PackageOpen, Star, User } from 'lucide-react';
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -6,6 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { EmptyState } from '@/components/ui/feedback';
 import { StatusBadge } from '@/components/ui/status-badge';
+import { RatingStars } from '@/components/ui/rating';
+import { ReviewsList } from '@/features/ratings/components/reviews-list';
+import { getCalificacionesEmprendimiento } from '@/features/ratings/queries';
 import { ProductCard } from '@/features/marketplace/components/product-card';
 import { ProductImage } from '@/features/marketplace/components/product-image';
 import { getEmprendimiento } from '@/features/marketplace/queries';
@@ -32,6 +35,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 /** HU-08: public business page with its available catalog. */
 export default async function EmprendimientoPage({ params }: Props) {
   const [e, session] = await Promise.all([load((await params).id), getSession()]);
+  const resumen = await getCalificacionesEmprendimiento(e.id);
 
   return (
     <>
@@ -48,6 +52,11 @@ export default async function EmprendimientoPage({ params }: Props) {
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <Badge tone="primary">{e.categoria.nombre}</Badge>
             <StatusBadge status={e.estado} />
+            {e.delMes && (
+              <Badge tone="accent">
+                <Award className="size-3" aria-hidden /> Emprendimiento del Mes
+              </Badge>
+            )}
             {e.destacado && (
               <Badge tone="warning">
                 <Star className="size-3 fill-current" aria-hidden /> Destacado
@@ -55,6 +64,7 @@ export default async function EmprendimientoPage({ params }: Props) {
             )}
           </div>
           <h1 className="text-2xl font-extrabold">{e.nombre}</h1>
+          <RatingStars value={resumen.promedio} total={resumen.total} className="mt-2" />
           <p className="mt-2 text-[14px] leading-relaxed text-muted">{e.descripcion}</p>
           <div className="mt-4 flex flex-wrap gap-5 text-[13px] text-muted">
             <span className="inline-flex items-center gap-1.5">
@@ -81,6 +91,13 @@ export default async function EmprendimientoPage({ params }: Props) {
           ))}
         </div>
       )}
+
+      <section className="mt-10" aria-labelledby="opiniones">
+        <h2 id="opiniones" className="mb-4 text-lg font-bold">
+          Opiniones de compradores
+        </h2>
+        <ReviewsList resumen={resumen} emptyText="Aún no hay opiniones sobre este emprendimiento." />
+      </section>
     </>
   );
 }

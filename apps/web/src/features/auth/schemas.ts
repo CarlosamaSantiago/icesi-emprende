@@ -21,5 +21,7 @@ export const registerSchema = z.object({
   semestreAcademico: z.number({ error: 'Selecciona tu semestre' }).int().min(1).max(12),
   clave: z.string().min(8, 'Mínimo 8 caracteres').max(72, 'Máximo 72 caracteres'),
   rol: z.enum(['COMPRADOR', 'EMPRENDEDOR']),
+  /** HU-45 CA1 */
+  aceptaTratamientoDatos: z.literal(true, { error: 'Debes aceptar la política de tratamiento de datos' }),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;

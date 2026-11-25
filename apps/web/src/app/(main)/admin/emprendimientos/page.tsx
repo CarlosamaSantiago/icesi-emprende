@@ -3,12 +3,13 @@ import Link from 'next/link';
 import { PageHeader } from '@/components/ui/feedback';
 import { StatusBadge } from '@/components/ui/status-badge';
 import { Table, Td, Th, Tr } from '@/components/ui/table';
+import { DecisionActions } from '@/features/admin/components/decision-actions';
 import { BusinessAdminActions } from '@/features/admin/components/business-admin-actions';
 import { ProductImage } from '@/features/marketplace/components/product-image';
 import { api } from '@/lib/api/client';
-import type { EmprendimientoResumen } from '@/lib/api/types';
+import type { EmprendimientoAdmin } from '@/lib/api/types';
 import { requireSession } from '@/lib/auth/session';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Administrar emprendimientos' };
 
@@ -22,14 +23,14 @@ export default async function AdminEmprendimientosPage({
 }) {
   await requireSession('ADMIN');
   const { estado = 'TODOS' } = await searchParams;
-  const all = await api<EmprendimientoResumen[]>('/admin/emprendimientos');
+  const all = await api<EmprendimientoAdmin[]>('/admin/emprendimientos');
   const items = estado === 'TODOS' ? all : all.filter((e) => e.estado === estado);
 
   return (
     <>
       <PageHeader
         title="Emprendimientos"
-        subtitle="Controla la visibilidad y los destacados del marketplace"
+        subtitle="Aprueba nuevos emprendimientos y controla visibilidad y destacados"
       />
       <nav aria-label="Filtrar por estado" className="mb-5 flex flex-wrap gap-2">
         {FILTERS.map((f) => (
@@ -76,9 +77,21 @@ export default async function AdminEmprendimientosPage({
               <Td className="text-muted">{e.semestre.periodo}</Td>
               <Td>
                 <StatusBadge status={e.estado} />
+                {e.ultimaDecision && (
+                  <p className="mt-1 max-w-56 text-xs text-muted">
+                    {e.ultimaDecision.decision === 'APROBADO' ? 'Aprobado' : 'Rechazado'} por{' '}
+                    {e.ultimaDecision.admin ?? 'un administrador'} · {formatDate(e.ultimaDecision.fecha)}
+                    {e.ultimaDecision.motivo && <> — {e.ultimaDecision.motivo}</>}
+                  </p>
+                )}
               </Td>
               <Td>
-                <BusinessAdminActions emprendimiento={e} />
+                {e.estado === 'PENDIENTE' ||
+                (e.estado === 'INACTIVO' && e.ultimaDecision?.decision === 'RECHAZADO') ? (
+                  <DecisionActions emprendimiento={e} />
+                ) : (
+                  <BusinessAdminActions emprendimiento={e} />
+                )}
               </Td>
             </Tr>
           ))}

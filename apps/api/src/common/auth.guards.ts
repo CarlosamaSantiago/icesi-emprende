@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtService } from '@nestjs/jwt';
+import { eq } from 'drizzle-orm';
 import type { Request } from 'express';
+import { type Database, InjectDb } from '../database/database.module.js';
+import { rol, userRole, usuario } from '../database/schema.js';
 import { AuthUser, IS_PUBLIC, Role, ROLES } from './auth.decorators.js';
 
 /** Global guard: every route requires a valid Bearer JWT unless marked @Public(). */
@@ -16,7 +19,23 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly reflector: Reflector,
+    @InjectDb() private readonly db: Database,
   ) {}
+
+  /** HU-27: roles are re-read from the database on every request, so changes apply immediately. */
+  private async liveUser(id: number) {
+    const [u] = await this.db
+      .select({ id: usuario.id, email: usuario.correoInstitucional, nombre: usuario.nombreCompleto })
+      .from(usuario)
+      .where(eq(usuario.id, id));
+    if (!u) return null;
+    const roles = await this.db
+      .select({ nombre: rol.nombre })
+      .from(userRole)
+      .innerJoin(rol, eq(userRole.rolId, rol.id))
+      .where(eq(userRole.usuarioId, id));
+    return { ...u, roles: roles.map((r) => r.nombre as Role) };
+  }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC, [ctx.getHandler(), ctx.getClass()]);
@@ -28,7 +47,9 @@ export class JwtAuthGuard implements CanActivate {
         const p = await this.jwt.verifyAsync<{ sub: number; email: string; nombre: string; roles: Role[] }>(
           token,
         );
-        req.user = { id: p.sub, email: p.email, nombre: p.nombre, roles: p.roles };
+        const live = await this.liveUser(p.sub);
+        if (!live) throw new UnauthorizedException('Cuenta no encontrada');
+        req.user = live;
       } catch {
         if (!isPublic) throw new UnauthorizedException('Token inválido o expirado');
       }

@@ -2,7 +2,15 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { and, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import type { AuthUser } from '../../common/auth.decorators.js';
 import { type Database, InjectDb } from '../../database/database.module.js';
-import { detallePedido, emprendimiento, notificacion, pedido, producto } from '../../database/schema.js';
+import {
+  detallePedido,
+  emprendimiento,
+  notificacion,
+  pago,
+  pedido,
+  producto,
+} from '../../database/schema.js';
+import { notificar } from '../shared/notificar.js';
 import { EstadosService } from '../shared/estados.service.js';
 import {
   allowedTransitions,
@@ -118,7 +126,12 @@ export class PedidosService {
   async updateEstado(user: AuthUser, id: number, { estado: to }: UpdateEstadoPedidoDto) {
     await this.db.transaction(async (tx) => {
       const [row] = await tx
-        .select({ estadoId: pedido.estadoId, ownerId: emprendimiento.usuarioId })
+        .select({
+          estadoId: pedido.estadoId,
+          ownerId: emprendimiento.usuarioId,
+          buyerId: pedido.usuarioId,
+          empNombre: emprendimiento.nombre,
+        })
         .from(pedido)
         .innerJoin(emprendimiento, eq(pedido.emprendimientoId, emprendimiento.id))
         .where(eq(pedido.id, id));
@@ -137,6 +150,23 @@ export class PedidosService {
 
       if (deductsStock(from, to)) await this.adjustStock(tx, id, -1);
       if (restoresStock(from, to)) await this.adjustStock(tx, id, +1);
+
+      // HU-44 CA3: a cancelled order can no longer count as paid revenue. Amounts are kept for audit;
+      // reports only add up CONFIRMADO payments.
+      if (to === 'CANCELADO') {
+        await tx
+          .update(pago)
+          .set({ estado: 'REEMBOLSADO', actualizadoEn: new Date() })
+          .where(and(eq(pago.pedidoId, id), eq(pago.estado, 'CONFIRMADO')));
+      }
+
+      // Keep the buyer informed (visible in their notification bell).
+      await notificar(tx, {
+        usuarioId: row.buyerId,
+        tipo: 'PEDIDO',
+        contenido: `Tu pedido #${id} en ${row.empNombre} ahora está ${to.toLowerCase()}`,
+        referenciaId: id,
+      });
     });
 
     const [result] = await this.load(eq(pedido.id, id), user.id);
@@ -169,10 +199,14 @@ export class PedidosService {
         emprendimiento: { columns: { id: true, nombre: true, usuarioId: true } },
         usuario: { columns: { id: true, nombreCompleto: true, correoInstitucional: true } },
         detalles: { with: { producto: { columns: { id: true, nombre: true } } } },
+        pago: true,
+        calificacion: { columns: { puntuacion: true, comentario: true } },
       },
     });
     return rows.map((p) => {
       const estado = this.estados.nombre(p.estadoId) as EstadoPedido;
+      const isSeller = p.emprendimiento.usuarioId === viewerId;
+      const isBuyer = p.usuario.id === viewerId;
       return {
         id: p.id,
         fechaPedido: p.fechaPedido,
@@ -191,7 +225,23 @@ export class PedidosService {
           subtotal: d.subtotal,
           producto: d.producto,
         })),
-        transicionesPermitidas: p.emprendimiento.usuarioId === viewerId ? allowedTransitions(estado) : [],
+        transicionesPermitidas: isSeller ? allowedTransitions(estado) : [],
+        // HU-44: the seller sees the financial breakdown; the buyer only sees the payment status.
+        pago: p.pago
+          ? isSeller
+            ? {
+                estado: p.pago.estado,
+                monto: p.pago.monto,
+                comisionCiei: p.pago.comisionCiei,
+                costoPasarela: p.pago.costoPasarela,
+                referencia: p.pago.referencia,
+              }
+            : { estado: p.pago.estado }
+          : null,
+        puedeRegistrarPago: isSeller && estado !== 'CANCELADO' && p.pago?.estado !== 'REEMBOLSADO',
+        // HU-37: rating is offered to the buyer of a delivered order that has not been rated yet.
+        calificacion: p.calificacion ?? null,
+        puedeCalificar: isBuyer && estado === 'ENTREGADO' && !p.calificacion,
       };
     });
   }

@@ -1,7 +1,16 @@
 'use client';
 
 import {
+  Award,
   Briefcase,
+  CalendarDays,
+  ChartColumn,
+  Gauge,
+  Star,
+  Tag,
+  Trophy,
+  Users,
+  Wallet,
   Package,
   Shield,
   ShoppingBag,
@@ -23,6 +32,15 @@ const ICONS: Record<NavIcon, LucideIcon> = {
   package: Package,
   shield: Shield,
   user: User,
+  chart: ChartColumn,
+  star: Star,
+  users: Users,
+  tag: Tag,
+  calendar: CalendarDays,
+  trophy: Trophy,
+  gauge: Gauge,
+  wallet: Wallet,
+  award: Award,
 };
 
 export function SidebarNav({ sections, onNavigate }: { sections: NavSection[]; onNavigate?: () => void }) {

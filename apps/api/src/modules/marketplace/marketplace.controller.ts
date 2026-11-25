@@ -26,6 +26,11 @@ export class MarketplaceController {
     return this.marketplace.destacados();
   }
 
+  @Get('marketplace/emprendimiento-del-mes')
+  delMes() {
+    return this.marketplace.delMes();
+  }
+
   @Get('emprendimientos/:id')
   emprendimiento(@Param('id', ParseIntPipe) id: number, @CurrentUser() user?: AuthUser) {
     return this.marketplace.emprendimiento(id, user);

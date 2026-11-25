@@ -7,6 +7,11 @@ import { JwtAuthGuard, RolesGuard } from './common/auth.guards.js';
 import { validateEnv } from './config/env.js';
 import { DatabaseModule } from './database/database.module.js';
 import { AdminModule } from './modules/admin/admin.module.js';
+import { CalificacionesModule } from './modules/calificaciones/calificaciones.module.js';
+import { LegalModule } from './modules/legal/legal.module.js';
+import { MetricasModule } from './modules/metricas/metricas.module.js';
+import { NotificacionesModule } from './modules/notificaciones/notificaciones.module.js';
+import { PagosModule } from './modules/pagos/pagos.module.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { HealthController } from './modules/health/health.controller.js';
 import { MarketplaceModule } from './modules/marketplace/marketplace.module.js';
@@ -36,6 +41,11 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module.js';
     NegocioModule,
     PedidosModule,
     AdminModule,
+    MetricasModule,
+    CalificacionesModule,
+    NotificacionesModule,
+    PagosModule,
+    LegalModule,
   ],
   controllers: [HealthController],
   providers: [

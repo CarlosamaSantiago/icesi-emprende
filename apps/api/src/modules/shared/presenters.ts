@@ -13,9 +13,11 @@ import {
   semestre,
   usuario,
 } from '../../database/schema.js';
+import { periodoActual } from './periodo.js';
 
 // ------------------------------------------------------------------ emprendimiento
-const emprendimientoColumns = {
+/** Built per call because "Emprendimiento del Mes" depends on the current month. */
+const emprendimientoColumns = () => ({
   id: emprendimiento.id,
   nombre: emprendimiento.nombre,
   descripcion: emprendimiento.descripcion,
@@ -32,13 +34,20 @@ const emprendimientoColumns = {
     sql<number>`(select count(*) from ${producto} where ${producto.emprendimientoId} = ${emprendimiento.id})`.mapWith(
       Number,
     ),
-};
+  /** HU-46 CA2: true when the latest designation of the current month points to this business. */
+  delMes: sql<boolean>`exists (
+    select 1 from emprendimiento_del_mes m
+    where m.id_emprendimiento = ${emprendimiento.id}
+      and m.periodo = ${periodoActual()}
+      and m.id_designacion = (select max(m2.id_designacion) from emprendimiento_del_mes m2 where m2.periodo = m.periodo)
+  )`.mapWith(Boolean),
+});
 
 export type EmprendimientoRow = Awaited<ReturnType<typeof selectEmprendimientos>>[number];
 
 export function selectEmprendimientos(db: Database, where?: SQL) {
   return db
-    .select(emprendimientoColumns)
+    .select(emprendimientoColumns())
     .from(emprendimiento)
     .innerJoin(estado, eq(emprendimiento.estadoId, estado.id))
     .innerJoin(categoria, eq(emprendimiento.categoriaId, categoria.id))
@@ -55,6 +64,7 @@ export function toEmprendimientoResumen(r: EmprendimientoRow) {
     descripcion: r.descripcion,
     logoUrl: r.logoUrl,
     destacado: r.destacado,
+    delMes: r.delMes,
     estado: r.estado,
     categoria: { id: r.categoriaId, nombre: r.categoriaNombre },
     semestre: { id: r.semestreId, periodo: r.semestrePeriodo },

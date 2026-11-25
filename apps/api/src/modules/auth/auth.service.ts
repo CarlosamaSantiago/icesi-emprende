@@ -4,7 +4,8 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 import { AuthUser, Role } from '../../common/auth.decorators.js';
 import { type Database, InjectDb } from '../../database/database.module.js';
-import { rol, userRole, usuario } from '../../database/schema.js';
+import { consentimiento, rol, userRole, usuario } from '../../database/schema.js';
+import { VERSION_POLITICA_DATOS } from '../legal/legal.service.js';
 import { LoginDto, RegisterDto } from './auth.dto.js';
 
 @Injectable()
@@ -51,6 +52,7 @@ export class AuthService {
         .returning();
       const r = await tx.query.rol.findFirst({ where: eq(rol.nombre, roleName) });
       await tx.insert(userRole).values({ usuarioId: u.id, rolId: r!.id });
+      await tx.insert(consentimiento).values({ usuarioId: u.id, version: VERSION_POLITICA_DATOS });
       return u;
     });
 

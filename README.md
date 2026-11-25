@@ -30,6 +30,10 @@ Usuarios demo (contraseña `1234`): `ximena@icesi.edu.co` (ADMIN + EMPRENDEDOR),
 | `npm run typecheck` / `npm run lint`    | Verificación estática                                      |
 | `npm --prefix apps/api run db:generate` | Genera una migración tras cambiar `src/database/schema.ts` |
 
+## Sprint 2 (HU-24…HU-46)
+
+La migración `0002_sprint2` agrega pagos, aprobaciones, consentimientos y Emprendimiento del Mes; `db/seed-sprint2.sql` agrega datos demo (se aplica tras `seed.sql`). Reglas y supuestos en `docs/architecture.md` §6b. Nuevas dependencias: `pdfkit` (API) y `@radix-ui/react-popover` (web).
+
 ## Despliegue
 
 ### 1. API + base de datos (Railway)

@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { and, asc, count, eq, ilike, or, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, or, type SQL } from 'drizzle-orm';
 import { type AuthUser, Role } from '../../common/auth.decorators.js';
 import { type Database, InjectDb } from '../../database/database.module.js';
-import { categoria, emprendimiento, estado, producto } from '../../database/schema.js';
+import { categoria, emprendimiento, emprendimientoDelMes, estado, producto } from '../../database/schema.js';
 import { EstadosService } from '../shared/estados.service.js';
 import {
   productoDetalle,
@@ -12,6 +12,7 @@ import {
   toEmprendimientoResumen,
   toProductoResumen,
 } from '../shared/presenters.js';
+import { periodoActual } from '../shared/periodo.js';
 import { CatalogQueryDto } from './marketplace.dto.js';
 
 const PAGE_SIZE = 12;
@@ -24,6 +25,20 @@ export class MarketplaceService {
     @InjectDb() private readonly db: Database,
     private readonly estados: EstadosService,
   ) {}
+
+  /** HU-46 CA2: the business recognised this month (latest designation wins); only if still ACTIVO. */
+  async delMes() {
+    const periodo = periodoActual();
+    const [d] = await this.db
+      .select({ emprendimientoId: emprendimientoDelMes.emprendimientoId })
+      .from(emprendimientoDelMes)
+      .where(eq(emprendimientoDelMes.periodo, periodo))
+      .orderBy(desc(emprendimientoDelMes.id))
+      .limit(1);
+    if (!d) return { periodo, emprendimiento: null };
+    const [e] = await selectEmprendimientos(this.db, eq(emprendimiento.id, d.emprendimientoId));
+    return { periodo, emprendimiento: e && e.estado === 'ACTIVO' ? toEmprendimientoResumen(e) : null };
+  }
 
   categorias() {
     return this.db.select().from(categoria).orderBy(asc(categoria.nombre));

@@ -1,4 +1,5 @@
 import { Store, User } from 'lucide-react';
+import { RatingStars } from '@/components/ui/rating';
 import { Card } from '@/components/ui/card';
 import { StatusBadge } from '@/components/ui/status-badge';
 import type { Pedido } from '@/lib/api/types';
@@ -47,6 +48,29 @@ export function OrderCard({
           </li>
         ))}
       </ul>
+      {pedido.pago && (
+        <div className="mt-3 rounded-md bg-surface-muted px-3.5 py-2.5 text-[12.5px]">
+          <p className="flex flex-wrap items-center gap-2">
+            <strong>Pago</strong> <StatusBadge status={pedido.pago.estado} />
+            {pedido.pago.referencia && <span className="text-muted">Ref. {pedido.pago.referencia}</span>}
+          </p>
+          {perspective === 'seller' && pedido.pago.monto !== undefined && (
+            <p className="mt-1.5 text-muted">
+              Comisión CIEI {formatCOP(pedido.pago.comisionCiei ?? 0)} · Pasarela{' '}
+              {formatCOP(pedido.pago.costoPasarela ?? 0)} · Neto{' '}
+              {formatCOP(
+                pedido.pago.monto - (pedido.pago.comisionCiei ?? 0) - (pedido.pago.costoPasarela ?? 0),
+              )}
+            </p>
+          )}
+        </div>
+      )}
+      {pedido.calificacion && (
+        <p className="mt-3 flex items-center gap-2 text-[12.5px] text-muted">
+          {perspective === 'buyer' ? 'Tu calificación:' : 'Calificación del comprador:'}
+          <RatingStars value={pedido.calificacion.puntuacion} size="sm" />
+        </p>
+      )}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
         <p className="text-[13.5px]">
           Total <strong className="text-base text-primary">{formatCOP(pedido.total)}</strong>

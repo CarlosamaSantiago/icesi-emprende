@@ -6,6 +6,8 @@ import { BusinessCard } from '@/features/marketplace/components/business-card';
 import { CatalogFilters } from '@/features/marketplace/components/catalog-filters';
 import { ProductCard } from '@/features/marketplace/components/product-card';
 import { getCatalog, getCategorias, getDestacados } from '@/features/marketplace/queries';
+import { api } from '@/lib/api/client';
+import type { DelMesActual } from '@/lib/api/types';
 import { getSession } from '@/lib/auth/session';
 
 export const metadata: Metadata = { title: 'Marketplace' };
@@ -18,11 +20,14 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   const categoriaId = Number(sp.categoria) || undefined;
   const filtering = !!(sp.q || categoriaId);
 
-  const [session, categorias, catalog, destacados] = await Promise.all([
+  const [session, categorias, catalog, destacados, delMes] = await Promise.all([
     getSession(),
     getCategorias(),
     getCatalog({ q: sp.q, categoriaId, page }),
     filtering ? Promise.resolve([]) : getDestacados(),
+    filtering
+      ? Promise.resolve(null)
+      : api<DelMesActual>('/marketplace/emprendimiento-del-mes', { auth: false }).catch(() => null),
   ]);
 
   const hrefFor = (p: number) => {
@@ -37,6 +42,17 @@ export default async function MarketplacePage({ searchParams }: { searchParams: 
   return (
     <>
       <PageHeader title="Marketplace" subtitle="Productos y servicios de la comunidad emprendedora Icesi" />
+
+      {delMes?.emprendimiento && (
+        <section aria-labelledby="del-mes" className="mb-8">
+          <h2 id="del-mes" className="mb-3 text-sm font-bold tracking-wide text-muted uppercase">
+            Emprendimiento del Mes · {delMes.periodo}
+          </h2>
+          <div className="max-w-md">
+            <BusinessCard emprendimiento={delMes.emprendimiento} />
+          </div>
+        </section>
+      )}
 
       {destacados.length > 0 && (
         <section aria-labelledby="destacados" className="mb-8">
